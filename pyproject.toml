@@ -1,0 +1,11 @@
+[project]
+name = "RoICalculation"
+version = "0.0.1"
+
+dependencies=[
+    "nerfstudio",
+    "fruit_proposal"
+]
+
+[tool.setuptools.packages.find]
+include = ["checkPoints*"]
