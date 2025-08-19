@@ -9,7 +9,14 @@ Methodology:
 
 1. Define with Semantic Is Enough the Region of Interest (ROI) for the next training.
 2. Use the checkpoints from the last training to calculate the ROI.
+    - The points within the ROI are defined as a uniform grid of points.
+    - This grid is concatenated with the default positions of the nerfacto field.
+    - The grid is used to calculate the density values.
+    - Using the positions we can define the directions and locations of the rays to 
+      calculate the RGB values.
 3. Render a new scene and populate with more shading points and rays the defined ROI.
+    - This is done by using the nerfacto field to render the scene with the new positions.
+    - The new scene is rendered with more details in the ROI.
 4. Use the new scene to train the nerfacto model.
 5. Repeat the process until the ROI is fully defined and the model is trained to satisfaction.
 
@@ -18,12 +25,18 @@ Result:
 A field that has renderized with more details the ROI's. This means every fruit within the ROI are
 renderized with more shading points and rays, leading to a more detailed and accurate model only for
 specific areas of interest.
+
+
 """
 
 from typing import Dict, Literal, Optional, Tuple
+import os
 
 import torch
 from torch import Tensor, nn
+
+import open3d as o3d
+from open3d.geometry import AxisAlignedBoundingBox
 
 from nerfstudio.cameras.rays import RaySamples
 from nerfstudio.data.scene_box import SceneBox
@@ -102,6 +115,7 @@ class RoiField(NerfactoField):
         spatial_distortion: Optional[SpatialDistortion] = None,
         average_init_density: float = 1.0,
         implementation: Literal["tcnn", "torch"] = "tcnn",
+        candidateRegions: Tuple[AxisAlignedBoundingBox,...] = tuple(),
     ) -> None:
         super().__init__(
             aabb=aabb,
@@ -145,7 +159,7 @@ class RoiField(NerfactoField):
 
 
 
-    def get_density(self, ray_samples: RaySamples) -> Tuple[Tensor, Tensor]:
+    def get_density(self, ray_samples: RaySamples, step: int = 0) -> Tuple[Tensor, Tensor]:
         """Computes and returns the densities."""
         if self.spatial_distortion is not None:
             positions = ray_samples.frustums.get_positions()
@@ -153,6 +167,24 @@ class RoiField(NerfactoField):
             positions = (positions + 2.0) / 4.0
         else:
             positions = SceneBox.get_normalized_positions(ray_samples.frustums.get_positions(), self.aabb)
+
+        """
+        This is where we have to add the new positions for the ROI.
+        """
+        # Extraction of positions
+        print("density", step)
+
+        if step > 29500:
+            print("Saving positions... step:", step)
+
+            os.makedirs("/workspace/Desktop/RoICalculation/positions/raw", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/positions/normalized", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/positions/encoded", exist_ok=True)
+
+            torch.save(ray_samples.frustums.get_positions().cpu(), f"/workspace/Desktop/RoICalculation/positions/raw/positions_{step}.pt")
+            torch.save(SceneBox.get_normalized_positions(ray_samples.frustums.get_positions(), self.aabb).cpu(), f"/workspace/Desktop/RoICalculation/positions/normalized/positions_{step}.pt")
+            torch.save(self.position_encoding(ray_samples.frustums.get_positions().view(-1, 3)).cpu(), f"/workspace/Desktop/RoICalculation/positions/encoded/positions_{step}.pt")
+
         # Make sure the tcnn gets inputs between 0 and 1.
         selector = ((positions > 0.0) & (positions < 1.0)).all(dim=-1)
         positions = positions * selector[..., None]
@@ -177,7 +209,7 @@ class RoiField(NerfactoField):
         return density, base_mlp_out
 
     def get_outputs(
-        self, ray_samples: RaySamples, density_embedding: Optional[Tensor] = None
+        self, ray_samples: RaySamples, density_embedding: Optional[Tensor] = None, step: int = 0
     ) -> Dict[FieldHeadNames, Tensor]:
         assert density_embedding is not None
         outputs = {}
@@ -185,6 +217,23 @@ class RoiField(NerfactoField):
             raise AttributeError("Camera indices are not provided.")
         camera_indices = ray_samples.camera_indices.squeeze()
         directions = get_normalized_directions(ray_samples.frustums.directions)
+
+        print("direction", step)
+
+        if step > 29500:
+            # Extraction of directions
+            print("Saving directions... step:", self.step)
+
+            os.makedirs("/workspace/Desktop/RoICalculation/directions/raw", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/directions/normalized", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/directions/encoded", exist_ok=True)
+
+            torch.save(ray_samples.frustums.directions.cpu(), f"/workspace/Desktop/RoICalculation/directions/raw/directions_{step}.pt")
+            torch.save(directions.cpu(), f"/workspace/Desktop/RoICalculation/directions/normalized/directions_{step}.pt")
+            torch.save(self.direction_encoding(directions.view(-1, 3)).cpu(), f"/workspace/Desktop/RoICalculation/directions/encoded/directions_{step}.pt")
+
+
+
         directions_flat = directions.view(-1, 3)
         d = self.direction_encoding(directions_flat)
 

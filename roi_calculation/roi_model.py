@@ -21,7 +21,10 @@ TODO: To learn how to solve (future) issue checkpoint of Nerfacto to be compatib
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import sys
 from typing import Dict, List, Literal, Tuple, Type
+import open3d as o3d
+from open3d.geometry import AxisAlignedBoundingBox
 
 import numpy as np
 import torch
@@ -33,8 +36,10 @@ from nerfstudio.engine.callbacks import TrainingCallback, TrainingCallbackAttrib
 from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.field_components.spatial_distortions import SceneContraction
 from nerfstudio.fields.density_fields import HashMLPDensityField
-from nerfstudio.fields.nerfacto_field import NerfactoField
+#from nerfstudio.fields.nerfacto_field import NerfactoField
+
 from roi_calculation.roi_field import RoiField
+
 from nerfstudio.model_components.losses import (
     MSELoss,
     distortion_loss,
@@ -49,6 +54,8 @@ from nerfstudio.model_components.scene_colliders import NearFarCollider
 from nerfstudio.model_components.shaders import NormalsShader
 from nerfstudio.models.base_model import Model, ModelConfig
 from nerfstudio.utils import colormaps
+
+from nerfstudio.utils.rich_utils import CONSOLE, ItersPerSecColumn
 
 
 @dataclass
@@ -133,6 +140,7 @@ class RoiModelConfig(ModelConfig):
     """Average initial density output from MLP. """
     camera_optimizer: CameraOptimizerConfig = field(default_factory=lambda: CameraOptimizerConfig(mode="SO3xR3"))
     """Config of the camera optimizer to use"""
+    candidateRegions: Tuple[AxisAlignedBoundingBox, ...] = tuple()
 
 
 class RoiModel(Model):
@@ -148,12 +156,20 @@ class RoiModel(Model):
         """Set the fields and modules."""
         super().populate_modules()
 
+        if not self.config.candidateRegions:
+            CONSOLE.rule("Error", style="red")
+            CONSOLE.print(f"The candidate regions are not set.", justify="center")
+            CONSOLE.rule(style="red")
+            sys.exit(1)
+
         if self.config.disable_scene_contraction:
             scene_contraction = None
         else:
             scene_contraction = SceneContraction(order=float("inf"))
 
         appearance_embedding_dim = self.config.appearance_embed_dim if self.config.use_appearance_embedding else 0
+
+        self.step = 0
 
         # Fields
         self.field = RoiField(
@@ -173,6 +189,7 @@ class RoiModel(Model):
             appearance_embedding_dim=appearance_embedding_dim,
             average_init_density=self.config.average_init_density,
             implementation=self.config.implementation,
+            candidateRegions=self.config.candidateRegions,
         )
 
         self.camera_optimizer: CameraOptimizer = self.config.camera_optimizer.setup(
@@ -244,7 +261,7 @@ class RoiModel(Model):
 
         # losses
         self.rgb_loss = MSELoss()
-        self.step = 0
+
         # metrics
         from torchmetrics.functional import structural_similarity_index_measure
         from torchmetrics.image import PeakSignalNoiseRatio
@@ -304,7 +321,10 @@ class RoiModel(Model):
             self.camera_optimizer.apply_to_raybundle(ray_bundle)
         ray_samples: RaySamples
         ray_samples, weights_list, ray_samples_list = self.proposal_sampler(ray_bundle, density_fns=self.density_fns)
-        field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals)
+
+        field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals, step=self.step)
+
+
         if self.config.use_gradient_scaling:
             field_outputs = scale_gradients_by_distance_squared(field_outputs, ray_samples)
 
@@ -362,9 +382,9 @@ class RoiModel(Model):
 
         self.camera_optimizer.get_metrics_dict(metrics_dict)
 
-        print(f"PSNR: {metrics_dict['psnr']:.2f} dB",
-                f" Distortion: {metrics_dict.get('distortion', 0):.4f}",
-                f" Step: {self.step}")
+        # print(f"PSNR: {metrics_dict['psnr']:.2f} dB",
+        #         f" Distortion: {metrics_dict.get('distortion', 0):.4f}",
+        #         f" Step: {self.step}")
 
         return metrics_dict
 
@@ -397,12 +417,12 @@ class RoiModel(Model):
             # Add loss from camera optimizer
             self.camera_optimizer.get_loss_dict(loss_dict)
 
-            print(f"RGB Loss: {loss_dict['rgb_loss']:.4f}",
-                  f"Interlevel Loss: {loss_dict.get('interlevel_loss', 0):.4f}",
-                  f"Distortion Loss: {loss_dict.get('distortion_loss', 0):.4f}",
-                  f"Orientation Loss: {loss_dict.get('orientation_loss', 0):.4f}",
-                  f"Pred Normal Loss: {loss_dict.get('pred_normal_loss', 0):.4f}",
-                  f"Step: {self.step}")
+            # print(f"RGB Loss: {loss_dict['rgb_loss']:.4f}",
+            #       f"Interlevel Loss: {loss_dict.get('interlevel_loss', 0):.4f}",
+            #       f"Distortion Loss: {loss_dict.get('distortion_loss', 0):.4f}",
+            #       f"Orientation Loss: {loss_dict.get('orientation_loss', 0):.4f}",
+            #       f"Pred Normal Loss: {loss_dict.get('pred_normal_loss', 0):.4f}",
+            #       f"Step: {self.step}")
 
         return loss_dict
 
