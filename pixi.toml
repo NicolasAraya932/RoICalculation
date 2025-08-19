@@ -1,0 +1,11 @@
+[workspace]
+channels = ["conda-forge"]
+name = "RoICalculation"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.10.*"
+pip = ">=25.2,<26"
