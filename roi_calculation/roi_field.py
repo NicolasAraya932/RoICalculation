@@ -36,7 +36,9 @@ import torch
 from torch import Tensor, nn
 
 import open3d as o3d
+import numpy as np
 from open3d.geometry import AxisAlignedBoundingBox
+from attachment.scripts.aabb_merge import tensor_to_aabbs
 
 from nerfstudio.cameras.rays import RaySamples
 from nerfstudio.data.scene_box import SceneBox
@@ -145,6 +147,8 @@ class RoiField(NerfactoField):
             implementation=implementation,
         )
 
+        self.bboxes = tensor_to_aabbs(torch.load("/workspace/Desktop/RoICalculation/ground_truth/candidate_regions/Roubboxes.pt"))
+
         # all child modules (by name)
         for name, module in self.named_children():
             print("module:", name, module)
@@ -172,7 +176,16 @@ class RoiField(NerfactoField):
         This is where we have to add the new positions for the ROI.
         """
         # Extraction of positions
-        print("density", step)
+        if step > 1 and step < 500:
+            print("Saving early positions... step:", step)
+
+            os.makedirs("/workspace/Desktop/RoICalculation/early/positions/raw", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/positions/normalized", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/positions/encoded", exist_ok=True)
+
+            torch.save(ray_samples.frustums.get_positions().cpu(), f"/workspace/Desktop/RoICalculation/early/positions/raw/positions_{step}.pt")
+            torch.save(SceneBox.get_normalized_positions(ray_samples.frustums.get_positions(), self.aabb).cpu(), f"/workspace/Desktop/RoICalculation/early/positions/normalized/positions_{step}.pt")
+            torch.save(self.position_encoding(ray_samples.frustums.get_positions().view(-1, 3)).cpu(), f"/workspace/Desktop/RoICalculation/early/positions/encoded/positions_{step}.pt")
 
         if step > 29500:
             print("Saving positions... step:", step)
@@ -218,16 +231,38 @@ class RoiField(NerfactoField):
         camera_indices = ray_samples.camera_indices.squeeze()
         directions = get_normalized_directions(ray_samples.frustums.directions)
 
-        print("direction", step)
+        if step > 1 and step < 500:
+            print("Saving early directions... step:", self.step)
+
+            os.makedirs("/workspace/Desktop/RoICalculation/early/starts/", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/ends/", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/origins/", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/directions/raw", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/directions/normalized", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/early/directions/encoded", exist_ok=True)
+
+            torch.save(ray_samples.frustums.ends.cpu(), f"/workspace/Desktop/RoICalculation/early/starts/ray_ends_{step}.pt")
+            torch.save(ray_samples.frustums.starts.cpu(), f"/workspace/Desktop/RoICalculation/early/ends/ray_starts_{step}.pt")
+            torch.save(ray_samples.frustums.origins.cpu(), f"/workspace/Desktop/RoICalculation/early/origins/ray_origins_{step}.pt")
+            torch.save(ray_samples.frustums.directions.cpu(), f"/workspace/Desktop/RoICalculation/early/directions/raw/directions_{step}.pt")
+            torch.save(directions.cpu(), f"/workspace/Desktop/RoICalculation/early/directions/normalized/directions_{step}.pt")
+            torch.save(self.direction_encoding(directions.view(-1, 3)).cpu(), f"/workspace/Desktop/RoICalculation/early/directions/encoded/directions_{step}.pt")
+
 
         if step > 29500:
             # Extraction of directions
             print("Saving directions... step:", self.step)
 
+            os.makedirs("/workspace/Desktop/RoICalculation/starts/", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/ends/", exist_ok=True)
+            os.makedirs("/workspace/Desktop/RoICalculation/origins/", exist_ok=True)
             os.makedirs("/workspace/Desktop/RoICalculation/directions/raw", exist_ok=True)
             os.makedirs("/workspace/Desktop/RoICalculation/directions/normalized", exist_ok=True)
             os.makedirs("/workspace/Desktop/RoICalculation/directions/encoded", exist_ok=True)
 
+            torch.save(ray_samples.frustums.ends.cpu(), f"/workspace/Desktop/RoICalculation/starts/ray_ends_{step}.pt")
+            torch.save(ray_samples.frustums.starts.cpu(), f"/workspace/Desktop/RoICalculation/ends/ray_starts_{step}.pt")
+            torch.save(ray_samples.frustums.origins.cpu(), f"/workspace/Desktop/RoICalculation/origins/ray_origins_{step}.pt")
             torch.save(ray_samples.frustums.directions.cpu(), f"/workspace/Desktop/RoICalculation/directions/raw/directions_{step}.pt")
             torch.save(directions.cpu(), f"/workspace/Desktop/RoICalculation/directions/normalized/directions_{step}.pt")
             torch.save(self.direction_encoding(directions.view(-1, 3)).cpu(), f"/workspace/Desktop/RoICalculation/directions/encoded/directions_{step}.pt")

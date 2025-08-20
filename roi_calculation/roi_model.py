@@ -156,11 +156,11 @@ class RoiModel(Model):
         """Set the fields and modules."""
         super().populate_modules()
 
-        if not self.config.candidateRegions:
-            CONSOLE.rule("Error", style="red")
-            CONSOLE.print(f"The candidate regions are not set.", justify="center")
-            CONSOLE.rule(style="red")
-            sys.exit(1)
+        # if not self.config.candidateRegions:
+        #     CONSOLE.rule("Error", style="red")
+        #     CONSOLE.print(f"The candidate regions are not set.", justify="center")
+        #     CONSOLE.rule(style="red")
+        #     sys.exit(1)
 
         if self.config.disable_scene_contraction:
             scene_contraction = None
@@ -322,7 +322,7 @@ class RoiModel(Model):
         ray_samples: RaySamples
         ray_samples, weights_list, ray_samples_list = self.proposal_sampler(ray_bundle, density_fns=self.density_fns)
 
-        field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals, step=self.step)
+        field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals, step=self.step, roi=True)
 
 
         if self.config.use_gradient_scaling:
