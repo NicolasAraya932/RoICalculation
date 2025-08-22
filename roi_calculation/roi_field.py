@@ -170,11 +170,11 @@ class RoiField(NerfactoField):
     def get_density(self, ray_samples: RaySamples, step: int = 0) -> Tuple[Tensor, Tensor]:
         """Computes and returns the densities."""
         positions = ray_samples.frustums.get_positions()
-        positions_shape = positions.shape
-        positions_reshape = positions.detach().numpy().reshape(-1,3)
-        pcd_positions = o3d.utility.Vector3dVector(positions_reshape)
-        positions_filtered = filter_points_by_bboxes(pcd_positions, self.bboxes)
-        positions_filtered = positions_filtered.reshape(positions_shape)
+        # positions_shape = positions.shape
+        # positions_reshape = positions.detach().numpy().reshape(-1,3)
+        # pcd_positions = o3d.utility.Vector3dVector(positions_reshape)
+        # positions_filtered = filter_points_by_bboxes(pcd_positions, self.bboxes)
+        # positions_filtered = positions_filtered.reshape(positions_shape)
 
         if self.spatial_distortion is not None:
             positions = self.spatial_distortion(positions)

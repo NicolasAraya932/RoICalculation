@@ -319,7 +319,7 @@ class RoiModel(Model):
         if self.training:
             self.camera_optimizer.apply_to_raybundle(ray_bundle)
         ray_samples: RaySamples
-        ray_samples, weights_list, ray_samples_list = self.proposal_sampler(ray_bundle, density_fns=self.density_fns)
+        ray_samples, weights_list, ray_samples_list = self.proposal_sampler(ray_bundle, density_fns=self.density_fns) # KILL
 
         field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals, step=self.step, roi=True)
 
