@@ -39,6 +39,7 @@ import open3d as o3d
 import numpy as np
 from open3d.geometry import AxisAlignedBoundingBox
 from attachment.scripts.aabb_merge import tensor_to_aabbs
+from roi_calculation.scripts.bboxes_ import filter_points_by_bboxes
 
 from nerfstudio.cameras.rays import RaySamples
 from nerfstudio.data.scene_box import SceneBox
@@ -109,6 +110,7 @@ class RoiField(NerfactoField):
         appearance_embedding_dim: int = 32,
         transient_embedding_dim: int = 16,
         use_transient_embedding: bool = False,
+        num_nerf_samples_per_ray: int = 48,
         use_semantics: bool = False,
         num_semantic_classes: int = 100,
         pass_semantic_gradients: bool = False,
@@ -148,6 +150,7 @@ class RoiField(NerfactoField):
         )
 
         self.bboxes = tensor_to_aabbs(torch.load("/workspace/Desktop/RoICalculation/ground_truth/candidate_regions/Roubboxes.pt"))
+        self.grids  = torch.load("/workspace/Desktop/RoICalculation/ground_truth/candidate_regions/grids.pt")
 
         # all child modules (by name)
         for name, module in self.named_children():
@@ -165,12 +168,18 @@ class RoiField(NerfactoField):
 
     def get_density(self, ray_samples: RaySamples, step: int = 0) -> Tuple[Tensor, Tensor]:
         """Computes and returns the densities."""
+        positions = ray_samples.frustums.get_positions()
+        positions_shape = positions.shape
+        positions_reshape = positions.detach().numpy().reshape(-1,3)
+        pcd_positions = o3d.utility.Vector3dVector(positions_reshape)
+        positions_filtered = filter_points_by_bboxes(pcd_positions, self.bboxes)
+        positions_filtered = positions_filtered.reshape(positions_shape)
+
         if self.spatial_distortion is not None:
-            positions = ray_samples.frustums.get_positions()
             positions = self.spatial_distortion(positions)
             positions = (positions + 2.0) / 4.0
         else:
-            positions = SceneBox.get_normalized_positions(ray_samples.frustums.get_positions(), self.aabb)
+            positions = SceneBox.get_normalized_positions(positions, self.aabb)
 
         """
         This is where we have to add the new positions for the ROI.

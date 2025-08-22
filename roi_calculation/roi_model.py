@@ -187,6 +187,7 @@ class RoiModel(Model):
             use_pred_normals=self.config.predict_normals,
             use_average_appearance_embedding=self.config.use_average_appearance_embedding,
             appearance_embedding_dim=appearance_embedding_dim,
+            num_nerf_samples_per_ray=self.config.num_nerf_samples_per_ray,
             average_init_density=self.config.average_init_density,
             implementation=self.config.implementation,
             candidateRegions=self.config.candidateRegions,
