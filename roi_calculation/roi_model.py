@@ -140,7 +140,6 @@ class RoiModelConfig(ModelConfig):
     """Average initial density output from MLP. """
     camera_optimizer: CameraOptimizerConfig = field(default_factory=lambda: CameraOptimizerConfig(mode="SO3xR3"))
     """Config of the camera optimizer to use"""
-    candidateRegions: Tuple[AxisAlignedBoundingBox, ...] = tuple()
 
 
 class RoiModel(Model):
@@ -190,7 +189,6 @@ class RoiModel(Model):
             num_nerf_samples_per_ray=self.config.num_nerf_samples_per_ray,
             average_init_density=self.config.average_init_density,
             implementation=self.config.implementation,
-            candidateRegions=self.config.candidateRegions,
         )
 
         self.camera_optimizer: CameraOptimizer = self.config.camera_optimizer.setup(

@@ -119,7 +119,6 @@ class RoiField(NerfactoField):
         spatial_distortion: Optional[SpatialDistortion] = None,
         average_init_density: float = 1.0,
         implementation: Literal["tcnn", "torch"] = "tcnn",
-        candidateRegions: Tuple[AxisAlignedBoundingBox,...] = tuple(),
     ) -> None:
         super().__init__(
             aabb=aabb,
@@ -151,6 +150,8 @@ class RoiField(NerfactoField):
 
         self.bboxes = tensor_to_aabbs(torch.load("/workspace/Desktop/RoICalculation/ground_truth/candidate_regions/Roubboxes.pt"))
         self.grids  = torch.load("/workspace/Desktop/RoICalculation/ground_truth/candidate_regions/grids.pt")
+
+        self.num_samples_per_ray = num_nerf_samples_per_ray
 
         # all child modules (by name)
         for name, module in self.named_children():
