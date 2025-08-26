@@ -328,6 +328,9 @@ class RoiModel(Model):
             field_outputs = scale_gradients_by_distance_squared(field_outputs, ray_samples)
 
         weights = ray_samples.get_weights(field_outputs[FieldHeadNames.DENSITY])
+
+        opacity_weights = ray_samples.get_alpha(field_outputs[FieldHeadNames.DENSITY], deltas=0.01)
+
         weights_list.append(weights)
         ray_samples_list.append(ray_samples)
 
@@ -337,11 +340,17 @@ class RoiModel(Model):
         expected_depth = self.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
         accumulation = self.renderer_accumulation(weights=weights)
 
+        # inside FruitProposalModel.get_outputs(...)
+        t_mid = 0.5 * (ray_samples.frustums.starts + ray_samples.frustums.ends)  # [N,S,1] or [N,S]
+
         outputs = {
             "rgb": rgb,
             "accumulation": accumulation,
             "depth": depth,
             "expected_depth": expected_depth,
+            "opacity_weights": opacity_weights.squeeze(-1),
+            "weights": weights.squeeze(-1),
+            "t_mid": t_mid.squeeze(-1),
         }
 
         if self.config.predict_normals:

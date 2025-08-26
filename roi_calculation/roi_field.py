@@ -186,7 +186,7 @@ class RoiField(NerfactoField):
         This is where we have to add the new positions for the ROI.
         """
         # Extraction of positions
-        if step > 1 and step < 500:
+        if (step > 1 and step < 500) or (step > 10000 and step < 10500):
             print("Saving early positions... step:", step)
 
             os.makedirs("/workspace/Desktop/RoICalculation/early/positions/raw", exist_ok=True)
