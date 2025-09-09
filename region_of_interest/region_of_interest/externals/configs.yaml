@@ -2,7 +2,10 @@ PATHS:
   CONFIG_PATH   : /workspace/Desktop/FruitProposal/outputs/Last_nerfacto/SynthBinRGBData/nerfacto/2025-08-26_101548/config.yml
   DATASETS_PATH : /workspace/Desktop/FruitProposal/datasets
   TORCH:
-    SEMANTIC_PC_PATH : /workspace/Desktop/FruitProposal/radiance_torch/n1000000/semantic_radiance_field_20250819_200839.pt
-    RADIANCE_PC_PATH : /workspace/Desktop/FruitProposal/exports/pcd/radiance_field_20250826_193041.pt
+    SEMANTIC_FIELD_PT : /workspace/Desktop/FruitProposal/radiance_torch/n1000000/semantic_radiance_field_20250819_200839.pt
+    RADIANCE_FIELD_PT : /workspace/Desktop/FruitProposal/exports/pcd/radiance_field_20250826_193041.pt
+  BBOXES:
+    CANDIDATE_REGIONS : /workspace/desktop/roicalculation/ground_truth/candidate_regions/roubboxes.pt
+
 PARAMETERS:
   NUM_RAYS_PER_BATCH : 32768

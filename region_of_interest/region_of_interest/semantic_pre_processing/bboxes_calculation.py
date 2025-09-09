@@ -22,9 +22,10 @@ class BboxCalculation:
 
     config : BboxCalculationConfig
 
-    def __init__(self, semantic_field_pt : PosixPath):
+    def __init__(self, semantic_field_pt : PosixPath, config : BboxCalculationConfig) -> None:
+        self.config = config
         self.semantic_field_pt = semantic_field_pt
-        self.semantic_field = torch.load(semantic_field_pt.read_text())
+        self.semantic_field = torch.load(semantic_field_pt)
         self.semantic_field_points = self.semantic_field['points'].cpu().numpy()
 
         self.k = self.config.k
