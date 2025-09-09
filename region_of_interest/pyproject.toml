@@ -1,0 +1,11 @@
+[project]
+name = "region_of_interest"
+version = "0.0.5"
+
+dependencies=[
+    "nerfstudio",
+    "fruit_proposal"
+]
+
+[tool.setuptools.packages.find]
+include = ["region_of_interest*"]

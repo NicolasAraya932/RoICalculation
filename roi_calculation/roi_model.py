@@ -323,6 +323,7 @@ class RoiModel(Model):
 
         field_outputs = self.field.forward(ray_samples, compute_normals=self.config.predict_normals, step=self.step, roi=True)
 
+
         if self.config.use_gradient_scaling:
             field_outputs = scale_gradients_by_distance_squared(field_outputs, ray_samples)
 
@@ -335,12 +336,19 @@ class RoiModel(Model):
         ray_samples_list.append(ray_samples)
 
         rgb = self.renderer_rgb(rgb=field_outputs[FieldHeadNames.RGB], weights=weights)
+        with torch.no_grad():
+            depth = self.renderer_depth(weights=weights, ray_samples=ray_samples)
+        expected_depth = self.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
+        accumulation = self.renderer_accumulation(weights=weights)
 
         # inside FruitProposalModel.get_outputs(...)
         t_mid = 0.5 * (ray_samples.frustums.starts + ray_samples.frustums.ends)  # [N,S,1] or [N,S]
 
         outputs = {
             "rgb": rgb,
+            "accumulation": accumulation,
+            "depth": depth,
+            "expected_depth": expected_depth,
             "alpha": alpha.squeeze(-1),
             "weights": weights.squeeze(-1),
             "t_mid": t_mid.squeeze(-1),
