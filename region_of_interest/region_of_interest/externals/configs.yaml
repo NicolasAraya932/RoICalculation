@@ -5,7 +5,7 @@ PATHS:
     SEMANTIC_FIELD_PT : /workspace/Desktop/FruitProposal/radiance_torch/n1000000/semantic_radiance_field_20250819_200839.pt
     RADIANCE_FIELD_PT : /workspace/Desktop/FruitProposal/exports/pcd/radiance_field_20250826_193041.pt
   BBOXES:
-    CANDIDATE_REGIONS : /workspace/desktop/roicalculation/ground_truth/candidate_regions/roubboxes.pt
+    CANDIDATE_REGIONS : /workspace/Desktop/RoICalculation/ground_truth/candidate_regions/Roubboxes.pt
 
 PARAMETERS:
   NUM_RAYS_PER_BATCH : 32768
